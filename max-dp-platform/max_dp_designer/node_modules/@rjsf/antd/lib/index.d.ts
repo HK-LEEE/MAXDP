@@ -1,0 +1,11 @@
+import { ComponentType } from 'react';
+import { FormContextType, RJSFSchema, StrictRJSFSchema } from '@rjsf/utils';
+import { FormProps, ThemeProps } from '@rjsf/core';
+import Templates, { generateTemplates } from './templates/index.js';
+import Widgets, { generateWidgets } from './widgets/index.js';
+export declare function generateTheme<T = any, S extends StrictRJSFSchema = RJSFSchema, F extends FormContextType = any>(): ThemeProps<T, S, F>;
+declare const Theme: ThemeProps<any, RJSFSchema, any>;
+export declare function generateForm<T = any, S extends StrictRJSFSchema = RJSFSchema, F extends FormContextType = any>(): ComponentType<FormProps<T, S, F>>;
+declare const Form: ComponentType<FormProps<any, RJSFSchema, any>>;
+export { Form, Templates, Theme, Widgets, generateTemplates, generateWidgets };
+export default Form;
