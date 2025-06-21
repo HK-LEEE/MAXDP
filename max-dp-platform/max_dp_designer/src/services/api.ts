@@ -242,9 +242,14 @@ class ApiService {
       const response = await this.axiosInstance.get('/api/v1/maxdp/flows', {
         params: { workspace_id: workspaceId },
       });
+      
+      // Backend returns { flows: [...], total: 10, skip: 0, limit: 100 }
+      // Extract the flows array from the response
+      const flows = response.data.flows || [];
+      
       return {
         success: true,
-        data: response.data,
+        data: flows,
       };
     } catch (error: any) {
       return {
@@ -284,10 +289,30 @@ class ApiService {
     }
   }
 
+  async getFlowDefinition(flowId: string, version?: number): Promise<ApiResponse<any>> {
+    try {
+      const params = version ? { version } : {};
+      const response = await this.axiosInstance.get(`/api/v1/maxdp/flows/${flowId}/definition`, {
+        params
+      });
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
   async saveFlowVersion(flowId: string, flowJson: any): Promise<ApiResponse<any>> {
     try {
       const response = await this.axiosInstance.post(`/api/v1/maxdp/flows/${flowId}/versions`, {
-        flow_json: flowJson,
+        flow_definition: flowJson,
+        description: "Flow 저장",
+        changelog: "Flow 업데이트"
       });
       return {
         success: true,
@@ -308,6 +333,131 @@ class ApiService {
       return {
         success: true,
         data: response.data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  // 데이터베이스 연결 관련 API
+  async getDatabaseConnections(): Promise<ApiResponse<any[]>> {
+    try {
+      // 데이터베이스 연결 테스트 및 정보 조회
+      const response = await this.axiosInstance.get('/api/v1/maxdp/database/connection/test');
+      
+      // 응답을 배열 형태로 변환 (기존 프론트엔드 코드와 호환)
+      const connectionData = [{
+        id: 'default',
+        name: response.data.database_name || 'Platform Database',
+        type: 'postgresql',
+        host: 'localhost',
+        port: 5432,
+        database: response.data.database_name,
+        isActive: response.data.status === 'connected',
+        version: response.data.version
+      }];
+      
+      return {
+        success: true,
+        data: connectionData,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  async getDatabaseSchemas(connectionId: string): Promise<ApiResponse<string[]>> {
+    try {
+      const response = await this.axiosInstance.get('/api/v1/maxdp/database/schemas', {
+        params: { include_system: false } // 시스템 스키마 제외
+      });
+      
+      // 스키마 이름만 추출
+      const schemaNames = response.data.map((schema: any) => schema.schema_name);
+      
+      return {
+        success: true,
+        data: schemaNames,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  async getDatabaseTables(connectionId: string, schema: string): Promise<ApiResponse<any[]>> {
+    try {
+      const response = await this.axiosInstance.get(`/api/v1/maxdp/database/schemas/${schema}/tables`);
+      
+      // 테이블 데이터를 프론트엔드 형식에 맞게 변환
+      const tables = response.data.map((table: any) => {
+        // 컬럼 데이터 변환: backend의 column_name, data_type을 frontend의 name, type으로 매핑
+        const transformedColumns = (table.columns || []).map((column: any) => ({
+          name: column.column_name,
+          type: column.data_type,
+          nullable: column.is_nullable,
+          description: column.comment,
+          defaultValue: column.default_value
+        }));
+        
+        const transformedTable = {
+          name: table.table_name,
+          schema: table.schema_name,
+          columns: transformedColumns,
+          rowCount: table.estimated_rows || 0,
+          description: table.table_comment || `${table.table_name} 테이블`,
+          size: table.table_size,
+          type: table.table_type
+        };
+        
+        return transformedTable;
+      });
+      
+      return {
+        success: true,
+        data: tables,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  async previewTableData(connectionId: string, params: {
+    schema: string;
+    tableName: string;
+    limit?: number;
+    whereClause?: string;
+  }): Promise<ApiResponse<any>> {
+    try {
+      // 실제 데이터 미리보기 API 호출
+      const response = await this.axiosInstance.post('/api/v1/maxdp/database/preview', {
+        schema: params.schema,
+        tableName: params.tableName,
+        limit: params.limit || 10,
+        whereClause: params.whereClause
+      });
+      
+      return {
+        success: true,
+        data: {
+          rows: response.data.data || [],
+          total_rows: response.data.metadata?.total_rows || 0,
+          columns: response.data.columns || [],
+          metadata: response.data.metadata || {},
+          schema: response.data.schema_name,
+          table: response.data.table_name
+        },
       };
     } catch (error: any) {
       return {
