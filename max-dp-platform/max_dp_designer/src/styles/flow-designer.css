@@ -1,0 +1,151 @@
+/* Flow Designer Custom Styles - Black & White Minimalism */
+
+/* React Flow 오버라이드 */
+.react-flow__handle {
+  width: 12px !important;
+  height: 12px !important;
+  background: #ffffff !important;
+  border: 2px solid #1a1a1a !important;
+  transition: all 0.2s ease;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.react-flow__handle-connecting {
+  background: #1a1a1a !important;
+}
+
+/* Controls 스타일 */
+.react-flow__controls {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.react-flow__controls-button {
+  background: #ffffff;
+  border-bottom: 1px solid #f0f0f0;
+  color: #1a1a1a;
+  transition: all 0.2s ease;
+}
+
+.react-flow__controls-button:hover {
+  background: #fafafa;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none;
+}
+
+.react-flow__controls-button svg {
+  fill: #1a1a1a;
+}
+
+/* MiniMap 스타일 */
+.react-flow__minimap {
+  background: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: #f0f0f0 !important;
+  opacity: 0.5 !important;
+}
+
+.react-flow__minimap-node {
+  fill: #1a1a1a !important;
+  stroke: #ffffff !important;
+  stroke-width: 2px !important;
+}
+
+/* Edge 스타일 */
+.react-flow__edge-path {
+  stroke: #1a1a1a !important;
+  stroke-width: 2px !important;
+  transition: all 0.2s ease;
+}
+
+.react-flow__edge-path:hover {
+  stroke-width: 3px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #000000 !important;
+  stroke-width: 3px !important;
+}
+
+/* Selection box */
+.react-flow__selection {
+  background: rgba(26, 26, 26, 0.05);
+  border: 1px solid #1a1a1a;
+}
+
+/* Node selection */
+.react-flow__node.selected {
+  outline: none !important;
+}
+
+/* Pane 스타일 */
+.react-flow__pane {
+  cursor: default;
+}
+
+.react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+/* Attribution 숨기기 */
+.react-flow__attribution {
+  display: none;
+}
+
+/* Custom scrollbar */
+.react-flow__node-custom::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.react-flow__node-custom::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.react-flow__node-custom::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 3px;
+}
+
+.react-flow__node-custom::-webkit-scrollbar-thumb:hover {
+  background: #b0b0b0;
+}
+
+/* Smooth animations */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}
+
+/* 드래그 중일 때 애니메이션 비활성화로 성능 개선 */
+.react-flow__node.dragging * {
+  transition: none !important;
+  pointer-events: none;
+}
+
+/* 노드 드래그 최적화 */
+.react-flow__node {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+/* 선택된 노드 스타일 */
+.react-flow__node.selected {
+  transform: translate3d(0, 0, 0) scale(1.02);
+  z-index: 1000;
+}

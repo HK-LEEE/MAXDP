@@ -48,7 +48,7 @@ class MaxDPFlow(Base):
     owner_group_id = Column(Integer, ForeignKey('groups.id'), nullable=True, comment="그룹 소유자 ID")
     
     # Flow 설정
-    status = Column(SQLEnum(FlowStatus), default=FlowStatus.DRAFT, comment="Flow 상태")
+    status = Column(String(20), default="draft", comment="Flow 상태")
     is_public = Column(Boolean, default=False, comment="공개 Flow 여부")
     tags = Column(JSON, nullable=True, comment="Flow 태그 (JSON 배열)")
     
@@ -159,7 +159,7 @@ class MaxDPFlowExecution(Base):
     version_id = Column(Integer, ForeignKey('maxdp_flow_versions.id'), nullable=True, comment="버전 ID")
     
     # 실행 상태
-    status = Column(SQLEnum(ExecutionStatus), default=ExecutionStatus.PENDING, comment="실행 상태")
+    status = Column(String(20), default="PENDING", comment="실행 상태")
     execution_id = Column(String(100), unique=True, nullable=False, comment="실행 고유 ID")
     
     # 실행 설정

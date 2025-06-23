@@ -592,3 +592,90 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Error previewing table data for '{schema_name}.{table_name}': {e}")
             raise RuntimeError(f"Failed to preview table data: {str(e)}")
+    
+    @staticmethod
+    async def execute_custom_sql(
+        sql_query: str,
+        schema_name: str = "public",
+        limit: int = 100
+    ) -> Dict[str, Any]:
+        """
+        사용자 정의 SQL 쿼리 실행 (SELECT만 허용)
+        
+        Args:
+            sql_query (str): 실행할 SQL 쿼리
+            schema_name (str): 스키마 이름 (기본값: public)
+            limit (int): 최대 반환 행 수 (기본값: 100, 최대: 1000)
+            
+        Returns:
+            Dict[str, Any]: 쿼리 실행 결과
+        """
+        try:
+            # 입력 검증
+            if limit > 1000:
+                limit = 1000
+            if limit < 1:
+                limit = 1
+                
+            async with db_manager.get_session() as session:
+                # SQL 쿼리 안전성 재검증
+                sql_query = sql_query.strip()
+                
+                # LIMIT이 없으면 추가
+                if not sql_query.upper().endswith(';'):
+                    sql_query = sql_query.rstrip(';')
+                
+                # LIMIT 절이 없으면 추가
+                if 'LIMIT' not in sql_query.upper():
+                    sql_query += f" LIMIT {limit}"
+                
+                logger.info(f"Executing custom SQL: {sql_query[:100]}...")
+                
+                # 쿼리 실행
+                result = await session.execute(text(sql_query))
+                rows = result.fetchall()
+                
+                # 컬럼 정보 추출
+                column_info = []
+                if result.keys():
+                    for col_name in result.keys():
+                        column_info.append({
+                            "column_name": col_name,
+                            "data_type": "unknown",  # SQL 결과에서 타입 정보를 얻기 어려움
+                            "is_nullable": True,
+                            "default_value": None,
+                            "max_length": None,
+                            "numeric_precision": None,
+                            "numeric_scale": None,
+                            "comment": None
+                        })
+                
+                # 결과를 딕셔너리 리스트로 변환
+                data_rows = []
+                for row in rows:
+                    row_dict = {}
+                    for i, col_name in enumerate(result.keys()):
+                        value = row[i] if i < len(row) else None
+                        # 특수 타입 처리 (datetime, UUID 등을 문자열로 변환)
+                        if value is not None:
+                            if hasattr(value, 'isoformat'):  # datetime 객체
+                                row_dict[col_name] = value.isoformat()
+                            else:
+                                row_dict[col_name] = str(value)
+                        else:
+                            row_dict[col_name] = None
+                    data_rows.append(row_dict)
+                
+                result_data = {
+                    "columns": column_info,
+                    "rows": data_rows,
+                    "total_rows": len(data_rows),
+                    "query": sql_query
+                }
+                
+                logger.info(f"Custom SQL executed successfully: {len(data_rows)} rows returned")
+                return result_data
+                
+        except Exception as e:
+            logger.error(f"Error executing custom SQL: {e}")
+            raise RuntimeError(f"Failed to execute SQL query: {str(e)}")

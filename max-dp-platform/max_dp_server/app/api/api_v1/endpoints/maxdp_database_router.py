@@ -93,6 +93,19 @@ class TablePreviewResponse(BaseModel):
     data: List[dict]
     metadata: TablePreviewMetadata
 
+class CustomSQLRequest(BaseModel):
+    connection_id: str
+    sql_query: str
+    schema: Optional[str] = "public"
+    limit: Optional[int] = 100
+
+class CustomSQLResponse(BaseModel):
+    columns: List[ColumnInfo]
+    rows: List[dict]
+    execution_time: Optional[float] = None
+    total_rows: int
+    query: str
+
 @router.get("/connection/test", response_model=DatabaseConnectionResponse, tags=["Database"])
 async def test_database_connection(
     current_user: UserContext = Depends(get_current_user)
@@ -412,4 +425,110 @@ async def preview_table_data(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="테이블 데이터 미리보기 중 오류가 발생했습니다."
+        )
+
+@router.post("/execute-sql", response_model=CustomSQLResponse, tags=["Database"])
+async def execute_custom_sql(
+    request: CustomSQLRequest,
+    current_user: UserContext = Depends(get_current_user)
+):
+    """
+    사용자 정의 SQL 쿼리 실행 (SELECT만 허용)
+    
+    Args:
+        request (CustomSQLRequest): SQL 실행 요청 정보
+            - connection_id: 데이터베이스 연결 ID
+            - sql_query: 실행할 SQL 쿼리 (SELECT만 허용)
+            - schema: 스키마 이름 (기본값: public)
+            - limit: 최대 반환 행 수 (기본값: 100, 최대: 1000)
+    
+    Returns:
+        CustomSQLResponse: 쿼리 실행 결과
+    """
+    import time
+    import re
+    
+    logger.info(f"Executing custom SQL for user: {current_user.email}")
+    logger.debug(f"SQL Query: {request.sql_query[:200]}...")  # 쿼리의 처음 200자만 로깅
+    
+    try:
+        # 입력 검증
+        if request.limit and request.limit > 1000:
+            request.limit = 1000
+        if request.limit and request.limit < 1:
+            request.limit = 1
+        
+        # 기본값 설정
+        limit = request.limit or 100
+        
+        # SQL 쿼리 안전성 검증
+        sql_query = request.sql_query.strip()
+        
+        # SELECT 쿼리만 허용
+        if not re.match(r'^\s*SELECT\s+', sql_query, re.IGNORECASE):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="SELECT 쿼리만 허용됩니다."
+            )
+        
+        # 위험한 키워드 체크
+        dangerous_keywords = [
+            'DROP', 'DELETE', 'INSERT', 'UPDATE', 'ALTER', 'CREATE', 
+            'TRUNCATE', 'GRANT', 'REVOKE', 'EXEC', 'EXECUTE'
+        ]
+        
+        sql_upper = sql_query.upper()
+        for keyword in dangerous_keywords:
+            if re.search(rf'\b{keyword}\b', sql_upper):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"'{keyword}' 명령어는 허용되지 않습니다."
+                )
+        
+        # 쿼리 실행 시간 측정 시작
+        start_time = time.time()
+        
+        # 데이터베이스 서비스 호출
+        result = await DatabaseService.execute_custom_sql(
+            sql_query=sql_query,
+            schema_name=request.schema or "public",
+            limit=limit
+        )
+        
+        # 실행 시간 계산
+        execution_time = time.time() - start_time
+        
+        logger.info(f"Custom SQL executed successfully for user {current_user.email}: {result['total_rows']} rows returned in {execution_time:.3f}s")
+        
+        # Pydantic 모델로 변환
+        columns = [ColumnInfo(**col) for col in result["columns"]]
+        
+        return CustomSQLResponse(
+            columns=columns,
+            rows=result["rows"],
+            execution_time=execution_time,
+            total_rows=result["total_rows"],
+            query=sql_query
+        )
+        
+    except HTTPException:
+        # 이미 처리된 HTTP 예외는 그대로 전달
+        raise
+    except ValueError as e:
+        logger.warning(f"Invalid SQL query for user {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except RuntimeError as e:
+        logger.error(f"Runtime error executing SQL for user {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error executing custom SQL for user {current_user.email}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="SQL 쿼리 실행 중 오류가 발생했습니다."
         )

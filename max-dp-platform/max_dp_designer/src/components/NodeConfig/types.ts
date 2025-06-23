@@ -83,8 +83,17 @@ export interface FilterCondition {
   logicalOperator?: 'AND' | 'OR';
 }
 
+export interface ColumnRename {
+  id: string;
+  originalName: string;
+  newName: string;
+  description?: string;
+}
+
 export interface RenameColumnsConfig extends BaseNodeConfig {
-  columnMappings: Record<string, string>;
+  columnMappings?: Record<string, string>;
+  renames?: ColumnRename[];
+  sourceSchema?: any[];
 }
 
 export interface TableWriterConfig extends BaseNodeConfig {
@@ -103,6 +112,20 @@ export interface FileWriterConfig extends BaseNodeConfig {
   includeHeader?: boolean;
 }
 
+export interface JoinDataConfig extends BaseNodeConfig {
+  joinType: 'inner' | 'left' | 'right' | 'full';
+  joinConditions: JoinCondition[];
+  leftSchema?: any[];
+  rightSchema?: any[];
+}
+
+export interface JoinCondition {
+  id: string;
+  leftColumn: string;
+  rightColumn: string;
+  operator: '=' | '!=' | '<' | '>' | '<=' | '>=';
+}
+
 // 노드 설정 유니온 타입
 export type NodeConfig = 
   | TableReaderConfig
@@ -112,6 +135,7 @@ export type NodeConfig =
   | SelectColumnsConfig
   | FilterRowsConfig
   | RenameColumnsConfig
+  | JoinDataConfig
   | TableWriterConfig
   | FileWriterConfig;
 
@@ -124,6 +148,7 @@ export enum NodeType {
   SELECT_COLUMNS = 'selectColumns',
   FILTER_ROWS = 'filterRows',
   RENAME_COLUMNS = 'renameColumns',
+  JOIN_DATA = 'joinData',
   TABLE_WRITER = 'tableWriter',
   FILE_WRITER = 'fileWriter',
 }

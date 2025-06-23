@@ -8,7 +8,8 @@ from fastapi import APIRouter
 # from .endpoints.maxdp_auth_router import router as auth_router
 from .endpoints.maxdp_users_router import router as users_router
 from .endpoints.maxdp_workspaces_router import router as workspaces_router
-# from .endpoints.maxdp_flows_router import router as flows_router
+from .endpoints.maxdp_flows_router import router as flows_router
+from .endpoints.maxdp_database_router import router as database_router
 
 # 메인 API 라우터 생성
 api_router = APIRouter()
@@ -25,7 +26,8 @@ async def api_info():
             "auth": "/auth",
             "users": "/users", 
             "workspaces": "/workspaces",
-            "flows": "/flows"
+            "flows": "/flows",
+            "database": "/database"
         }
     }
 
@@ -38,7 +40,8 @@ async def api_status():
         "services": {
             "authentication": "available",
             "workspace_management": "available", 
-            "flow_management": "available"
+            "flow_management": "available",
+            "database_management": "available"
         }
     }
 
@@ -46,4 +49,5 @@ async def api_status():
 # api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(users_router, prefix="/users", tags=["Users"])
 api_router.include_router(workspaces_router, prefix="/workspaces", tags=["Workspaces"])
-# api_router.include_router(flows_router, prefix="/flows", tags=["Flows"]) 
+api_router.include_router(flows_router, prefix="/flows", tags=["Flows"])
+api_router.include_router(database_router, prefix="/database", tags=["Database"]) 

@@ -1,0 +1,28 @@
+# ==============================================================================
+# MAX DP 서버 Windows 환경 전용 패키지
+# IIS 배포, Windows 서비스, 성능 최적화를 위한 패키지들을 포함합니다.
+# ==============================================================================
+
+# 기본 의존성 포함
+-r requirements.txt
+
+# Windows 서비스 지원 (강제 설치)
+pywin32==306
+pywin32-ctypes==0.2.2
+pypiwin32==223
+
+# IIS 배포를 위한 WSGI 서버
+waitress==2.1.2
+wfastcgi==3.0.0
+
+# Windows 성능 최적화
+# Windows 환경에서 더 나은 성능을 위한 C 확장 패키지들
+hiredis==2.2.3  # Redis 성능 향상
+orjson==3.9.10  # JSON 파싱 성능 향상
+
+# Windows 특화 모니터링
+psutil==5.9.6  # 시스템 리소스 모니터링
+wmi==1.5.1  # Windows Management Instrumentation
+
+# Windows 환경 디버깅 도구
+pywin32-debugger==306

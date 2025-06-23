@@ -1,22 +1,46 @@
+# Core Web Framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
+
+# Database
 sqlalchemy[asyncio]==2.0.23
 asyncpg==0.29.0
+psycopg2-binary==2.9.9  # Windows 호환 PostgreSQL 드라이버
+alembic==1.13.1
+
+# Configuration & Validation
 pydantic[email]==2.5.0
 pydantic-settings==2.1.0
-alembic==1.13.1
 python-dotenv==1.0.0
+
+# Authentication & Security
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+
+# HTTP Client & File Handling
 httpx==0.25.2
-psycopg2-binary==2.9.9
 python-multipart==0.0.6
+
+# Template Engine
 Jinja2==3.1.2
+
+# Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
-# Phase 4 additions - LangChain 기반 실행 엔진
+
+# Data Processing
 pandas==2.1.4
+
+# LangChain & Flow Execution
 langchain-core==0.2.10
 RestrictedPython==6.0
-APScheduler==3.10.4 
-psycopg2
+
+# Task Scheduling (Windows 호환)
+APScheduler==3.10.4
+
+# Redis for Queue System (Windows 호환)
+redis==5.0.1
+
+# Windows Service Support
+pywin32==306; sys_platform == "win32"
+pywin32-ctypes==0.2.2; sys_platform == "win32"

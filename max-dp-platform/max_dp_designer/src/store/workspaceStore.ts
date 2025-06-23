@@ -42,7 +42,10 @@ interface WorkspaceActions {
   createFlow: (flow: { name: string; workspace_id: string; description?: string }) => Promise<Flow | null>;
   selectFlow: (flow: Flow | null) => void;
   getFlow: (flowId: string) => Promise<Flow | null>;
+  getFlowDefinition: (flowId: string, version?: number) => Promise<any>;
   saveFlowVersion: (flowId: string, flowJson: any) => Promise<boolean>;
+  saveDraftFlowVersion: (flowId: string, flowJson: any) => Promise<boolean>;
+  getDraftFlowVersion: (flowId: string) => Promise<any>;
   clearError: () => void;
   reset: () => void;
 }
@@ -137,8 +140,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       const response = await apiService.getFlows(workspaceId);
 
       if (response.success && response.data) {
+        // Ensure flows is always an array
+        const flowsArray = Array.isArray(response.data) ? response.data : [];
         set({
-          flows: response.data,
+          flows: flowsArray,
           isLoading: false,
         });
       } else {
@@ -163,9 +168,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       const response = await apiService.createFlow(flow);
 
       if (response.success && response.data) {
-        // 목록에 새 Flow 추가
+        // 목록에 새 Flow 추가 - flows가 배열인지 확인
         set((state) => ({
-          flows: [...state.flows, response.data],
+          flows: Array.isArray(state.flows) ? [...state.flows, response.data] : [response.data],
           isLoading: false,
         }));
         return response.data;
@@ -216,6 +221,32 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
+  // Flow 정의 조회
+  getFlowDefinition: async (flowId, version) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const response = await apiService.getFlowDefinition(flowId, version);
+
+      if (response.success && response.data) {
+        set({ isLoading: false });
+        return response.data;
+      } else {
+        set({
+          error: response.error || 'Flow 정의를 가져오는데 실패했습니다.',
+          isLoading: false,
+        });
+        return null;
+      }
+    } catch (error: any) {
+      set({
+        error: error.message || 'Flow 정의 조회 중 오류가 발생했습니다.',
+        isLoading: false,
+      });
+      return null;
+    }
+  },
+
   // Flow 버전 저장
   saveFlowVersion: async (flowId, flowJson) => {
     set({ isLoading: true, error: null });
@@ -239,6 +270,31 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         isLoading: false,
       });
       return false;
+    }
+  },
+
+  // Flow 임시 저장 (Draft)
+  saveDraftFlowVersion: async (flowId, flowJson) => {
+    try {
+      const response = await apiService.saveDraftFlowVersion(flowId, flowJson);
+      return response.success;
+    } catch (error: any) {
+      console.error('Draft save failed:', error);
+      return false;
+    }
+  },
+
+  // Flow 임시 저장 버전 조회
+  getDraftFlowVersion: async (flowId) => {
+    try {
+      const response = await apiService.getDraftFlowVersion(flowId);
+      if (response.success && response.data) {
+        return response.data;
+      }
+      return null;
+    } catch (error: any) {
+      console.error('Draft load failed:', error);
+      return null;
     }
   },
 
@@ -271,7 +327,7 @@ export const useWorkspaces = () => {
 export const useFlows = () => {
   const store = useWorkspaceStore();
   return {
-    flows: store.flows,
+    flows: Array.isArray(store.flows) ? store.flows : [],
     selectedFlow: store.selectedFlow,
     isLoading: store.isLoading,
     error: store.error,
@@ -279,7 +335,10 @@ export const useFlows = () => {
     createFlow: store.createFlow,
     selectFlow: store.selectFlow,
     getFlow: store.getFlow,
+    getFlowDefinition: store.getFlowDefinition,
     saveFlowVersion: store.saveFlowVersion,
+    saveDraftFlowVersion: store.saveDraftFlowVersion,
+    getDraftFlowVersion: store.getDraftFlowVersion,
     clearError: store.clearError,
   };
 };

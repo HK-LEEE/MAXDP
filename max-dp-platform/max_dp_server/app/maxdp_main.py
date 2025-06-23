@@ -88,9 +88,13 @@ def create_application() -> FastAPI:
         CORSMiddleware,
         allow_origins=["*"] if settings.debug else [
             "http://localhost:3000",
+            "http://localhost:3003",  # FlowStudio frontend
             "http://localhost:8000",
+            "http://localhost:8001",  # MAXDP frontend
             "http://127.0.0.1:3000",
+            "http://127.0.0.1:3003",  # FlowStudio frontend
             "http://127.0.0.1:8000",
+            "http://127.0.0.1:8001",  # MAXDP frontend
         ],
         allow_credentials=True,
         allow_methods=["*"],

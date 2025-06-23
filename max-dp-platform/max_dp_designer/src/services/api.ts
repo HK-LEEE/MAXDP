@@ -326,6 +326,68 @@ class ApiService {
     }
   }
 
+  // 임시 저장 (Draft) 기능 - 브라우저 로컬 스토리지 활용
+  async saveDraftFlowVersion(flowId: string, flowJson: any): Promise<ApiResponse<any>> {
+    try {
+      // 브라우저 로컬 스토리지에 임시 저장
+      const draftKey = `flow_draft_${flowId}`;
+      const draftData = {
+        flow_definition: flowJson,
+        saved_at: new Date().toISOString(),
+        description: "임시 저장",
+        is_draft: true
+      };
+      
+      localStorage.setItem(draftKey, JSON.stringify(draftData));
+      
+      return {
+        success: true,
+        data: draftData,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || "임시 저장에 실패했습니다.",
+      };
+    }
+  }
+
+  async getDraftFlowVersion(flowId: string): Promise<ApiResponse<any>> {
+    try {
+      const draftKey = `flow_draft_${flowId}`;
+      const draftData = localStorage.getItem(draftKey);
+      
+      if (draftData) {
+        const parsedData = JSON.parse(draftData);
+        
+        // 24시간 이내의 데이터만 유효
+        const savedTime = new Date(parsedData.saved_at).getTime();
+        const now = new Date().getTime();
+        const hoursDiff = (now - savedTime) / (1000 * 60 * 60);
+        
+        if (hoursDiff < 24) {
+          return {
+            success: true,
+            data: parsedData,
+          };
+        } else {
+          // 오래된 데이터 삭제
+          localStorage.removeItem(draftKey);
+        }
+      }
+      
+      return {
+        success: false,
+        error: "임시 저장된 데이터가 없습니다.",
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || "임시 저장 데이터 로드에 실패했습니다.",
+      };
+    }
+  }
+
   // 실행 관련 API
   async executeFlow(endpoint: string, params: any): Promise<ApiResponse<any>> {
     try {
@@ -333,6 +395,40 @@ class ApiService {
       return {
         success: true,
         data: response.data,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  // SelectColumns 노드 미리보기
+  async previewSelectColumns(params: {
+    nodeId: string;
+    selectedColumns: string[];
+    sourceData?: any[];
+    sourceSchema?: any[];
+    limit?: number;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.axiosInstance.post('/api/v1/maxdp/nodes/select-columns/preview', {
+        node_id: params.nodeId,
+        selected_columns: params.selectedColumns,
+        source_data: params.sourceData,
+        source_schema: params.sourceSchema,
+        limit: params.limit || 10
+      });
+      
+      return {
+        success: true,
+        data: {
+          rows: response.data.rows || [],
+          columns: response.data.columns || [],
+          total_rows: response.data.total_rows || 0,
+          selected_columns: response.data.selected_columns || []
+        },
       };
     } catch (error: any) {
       return {
@@ -401,12 +497,18 @@ class ApiService {
       const tables = response.data.map((table: any) => {
         // 컬럼 데이터 변환: backend의 column_name, data_type을 frontend의 name, type으로 매핑
         const transformedColumns = (table.columns || []).map((column: any) => ({
-          name: column.column_name,
-          type: column.data_type,
-          nullable: column.is_nullable,
-          description: column.comment,
-          defaultValue: column.default_value
+          name: column.column_name || column.name || '',  // column_name이 없으면 name도 시도
+          type: column.data_type || column.type || 'unknown',  // data_type이 없으면 type도 시도
+          nullable: column.is_nullable !== undefined ? column.is_nullable : column.nullable,
+          description: column.comment || column.description,
+          defaultValue: column.default_value || column.defaultValue
         }));
+        
+        console.log('Table columns transformation:', {
+          tableName: table.table_name,
+          originalColumns: table.columns?.slice(0, 2), // 처음 2개만 로깅
+          transformedColumns: transformedColumns?.slice(0, 2) // 처음 2개만 로깅
+        });
         
         const transformedTable = {
           name: table.table_name,
@@ -429,6 +531,38 @@ class ApiService {
       return {
         success: false,
         error: error.response?.data?.detail || error.message,
+      };
+    }
+  }
+
+  async executeCustomSQL(params: {
+    connectionId: string;
+    sqlQuery: string;
+    schema?: string;
+    limit?: number;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const response = await this.axiosInstance.post('/api/v1/maxdp/database/execute-sql', {
+        connection_id: params.connectionId,
+        sql_query: params.sqlQuery,
+        schema: params.schema || 'public',
+        limit: params.limit || 100
+      });
+      
+      return {
+        success: true,
+        data: {
+          columns: response.data.columns || [],
+          rows: response.data.rows || response.data.data || [],
+          execution_time: response.data.execution_time,
+          total_rows: response.data.total_rows,
+          query: params.sqlQuery
+        }
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message || 'SQL 실행 중 오류가 발생했습니다.'
       };
     }
   }

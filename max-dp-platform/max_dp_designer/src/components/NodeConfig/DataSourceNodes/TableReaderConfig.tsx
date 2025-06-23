@@ -82,12 +82,16 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
   useEffect(() => {
     if (props.config.tableName && tables.length > 0) {
       const selectedTable = tables.find(table => table.name === props.config.tableName);
+      console.log('Selected table for columns:', selectedTable); // 디버깅
       if (selectedTable && selectedTable.columns) {
+        console.log('Setting available columns:', selectedTable.columns); // 디버깅
         setAvailableColumns(selectedTable.columns);
       } else {
+        console.log('No columns found for table:', props.config.tableName); // 디버깅
         setAvailableColumns([]);
       }
     } else {
+      console.log('No table selected or no tables loaded'); // 디버깅
       setAvailableColumns([]);
     }
   }, [props.config.tableName, tables]);
@@ -188,8 +192,11 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
   const handleTableSelect = (tableName: string) => {
     const selectedTable = tables.find(table => table.name === tableName);
     
+    console.log('Handling table select:', tableName, selectedTable); // 디버깅
+    
     // 컬럼 정보 설정
     const columns = selectedTable?.columns || [];
+    console.log('Setting columns from handleTableSelect:', columns); // 디버깅
     setAvailableColumns(columns);
     
     // 테이블 선택 상태 업데이트
@@ -207,10 +214,12 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
       whereClause: '' // WHERE 절도 초기화
     };
     
+    console.log('Table select - new config:', newConfig); // 디버깅
     props.onConfigChange(newConfig);
     
     // 강제 리렌더링을 위해 약간의 지연 후 다시 설정
     setTimeout(() => {
+      console.log('Setting columns again after timeout:', columns); // 디버깅
       setAvailableColumns(columns);
       setTableSelected(!!tableName);
     }, 100);
@@ -396,32 +405,27 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
 
   return (
     <>
-      <div style={{ padding: '16px' }}>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <div style={{ padding: '12px' }}>
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
           
           {/* 기본 설정 */}
           <div>
-            <Typography.Title level={5}>기본 설정</Typography.Title>
-            <Space direction="vertical" style={{ width: '100%' }}>
+            <Typography.Title level={5} style={{ marginBottom: '8px' }}>기본 설정</Typography.Title>
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
               <div>
-                <Typography.Text strong>노드 이름</Typography.Text>
+                <Typography.Text strong style={{ fontSize: '13px' }}>노드 이름</Typography.Text>
                 <Input
                   placeholder="노드 이름을 입력하세요"
                   value={props.config.label || ''}
                   onChange={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
                     const newValue = e.target.value;
+                    console.log('Node name input change:', newValue); // 디버깅
                     const newConfig = { ...props.config, label: newValue };
-                    props.onConfigChange(newConfig);
-                  }}
-                  onBlur={(e) => {
-                    // 블러 시에도 업데이트 확인
-                    const newConfig = { ...props.config, label: e.target.value };
                     props.onConfigChange(newConfig);
                   }}
                   style={{ marginTop: '4px' }}
                   autoComplete="off"
+                  key={`node-name-${props.nodeId}`} // React key 추가
                 />
               </div>
               
@@ -452,7 +456,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
               <div>
                 <Typography.Text strong>데이터베이스 연결 *</Typography.Text>
                 <Select
-                  style={{ width: '100%', marginTop: '4px' }}
+                  style={{ width: '100%', marginTop: '2px' }}
                   placeholder="데이터베이스 연결을 선택하세요"
                   value={selectedConnection}
                   onChange={handleConnectionChange}
@@ -476,7 +480,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
                 <div>
                   <Typography.Text strong>스키마 *</Typography.Text>
                   <Select
-                    style={{ width: '100%', marginTop: '4px' }}
+                    style={{ width: '100%', marginTop: '2px' }}
                     placeholder="스키마를 선택하세요"
                     value={selectedSchema}
                     onChange={handleSchemaChange}
@@ -535,7 +539,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
 
               {/* 선택된 테이블 정보 */}
               {props.config.tableName && (
-                <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '6px' }}>
+                <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: '4px' }}>
                   <Space direction="vertical" style={{ width: '100%' }}>
                     <Space>
                       <Text strong>선택된 테이블:</Text>
@@ -561,14 +565,14 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
           {/* 데이터 필터링 설정 */}
           {(props.config.tableName || tableSelected) && (
             <div>
-              <Typography.Title level={5}>데이터 필터링</Typography.Title>
-              <Space direction="vertical" style={{ width: '100%' }}>
+              <Typography.Title level={5} style={{ marginBottom: '8px' }}>데이터 필터링</Typography.Title>
+              <Space direction="vertical" size="small" style={{ width: '100%' }}>
                 
                 {/* WHERE 조건 설정 */}
                 <div>
                   <div style={{ marginBottom: '8px' }}>
                     <Space>
-                      <Typography.Text strong>WHERE 조건</Typography.Text>
+                      <Typography.Text strong style={{ fontSize: '13px' }}>WHERE 조건</Typography.Text>
                       <Button 
                         type="dashed" 
                         icon={<PlusOutlined />} 
@@ -583,7 +587,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
                   </div>
                   
                   {whereConditions.length === 0 && (
-                    <div style={{ padding: '16px', textAlign: 'center', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px dashed #d9d9d9' }}>
+                    <div style={{ padding: '8px', textAlign: 'center', backgroundColor: '#fafafa', borderRadius: '4px', border: '1px dashed #d9d9d9' }}>
                       <Text type="secondary" style={{ fontSize: '12px' }}>
                         {availableColumns.length === 0 
                           ? '컬럼 정보를 불러오는 중입니다...' 
@@ -595,7 +599,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
                   
                   <Space direction="vertical" style={{ width: '100%' }}>
                     {whereConditions.map((condition, index) => (
-                      <Card key={condition.id} size="small" style={{ width: '100%', position: 'relative' }}>
+                      <Card key={condition.id} size="small" style={{ width: '100%', position: 'relative', marginBottom: '8px' }}>
                         <Row gutter={8} align="middle">
                           <Col span={6}>
                             <Select
@@ -618,14 +622,17 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
                                 </div>
                               )}
                             >
-                              {availableColumns.map(col => (
-                                <Option key={col.name} value={col.name}>
-                                  <Space>
-                                    <span>{col.name || '빈 컬럼명'}</span>
-                                    <Text type="secondary" style={{ fontSize: '11px' }}>({col.type || 'unknown'})</Text>
-                                  </Space>
-                                </Option>
-                              ))}
+                              {availableColumns.map((col, idx) => {
+                                console.log('Column in dropdown:', col); // 디버깅 로그
+                                return (
+                                  <Option key={`${col.name || idx}`} value={col.name || ''}>
+                                    <Space>
+                                      <span>{col.name || `[빈 컬럼명 ${idx + 1}]`}</span>
+                                      <Text type="secondary" style={{ fontSize: '11px' }}>({col.type || 'unknown'})</Text>
+                                    </Space>
+                                  </Option>
+                                );
+                              })}
                             </Select>
                           </Col>
                           
@@ -681,7 +688,7 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
                 </div>
                 
                 <div>
-                  <Typography.Text strong>최대 행 수</Typography.Text>
+                  <Typography.Text strong style={{ fontSize: '13px' }}>최대 행 수</Typography.Text>
                   <Input
                     type="number"
                     placeholder="제한 없음 (0)"
@@ -706,9 +713,9 @@ const TableReaderConfig: React.FC<TableReaderConfigProps> = (props) => {
         </Space>
         
         {/* 설정 저장 및 미리보기 버튼 */}
-        <Divider />
+        <Divider style={{ margin: '12px 0' }} />
         
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', paddingBottom: '8px' }}>
           <Space size="large">
             <Button 
               type="default"

@@ -3,7 +3,7 @@
  * CLAUDE.local.md 가이드라인에 따른 행 필터링 노드 설정
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Button, 
   Select, 
@@ -20,6 +20,8 @@ import {
   DatePicker,
   Empty,
   Tooltip,
+  Spin,
+  Alert,
 } from 'antd';
 import { 
   PlusOutlined,
@@ -28,9 +30,9 @@ import {
   CodeOutlined,
   FunctionOutlined,
   QuestionCircleOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-
 import BaseNodeConfig from '../BaseNodeConfig';
 import { 
   NodeConfigProps, 
@@ -38,19 +40,18 @@ import {
   FilterCondition,
 } from '../types';
 import { filterRowsSchema } from '../schemas';
+import { getInputSchema, ColumnInfo } from '../../../utils/schemaUtils';
 
 const { Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
 
 interface FilterRowsConfigProps extends NodeConfigProps<FilterRowsConfigType> {
-  // 추가 props
+  nodes?: any[];
+  edges?: any[];
 }
 
-interface ColumnInfo {
-  name: string;
-  type: string;
-  nullable: boolean;
+interface ExtendedColumnInfo extends ColumnInfo {
   sampleValues?: string[];
 }
 
@@ -58,50 +59,68 @@ interface ColumnInfo {
  * Filter Rows 노드 전용 설정 컴포넌트
  */
 const FilterRowsConfig: React.FC<FilterRowsConfigProps> = (props) => {
-  const [availableColumns, setAvailableColumns] = useState<ColumnInfo[]>([
-    { 
-      name: 'id', 
-      type: 'integer', 
-      nullable: false, 
-      sampleValues: ['1', '2', '3', '4', '5'] 
-    },
-    { 
-      name: 'name', 
-      type: 'varchar', 
-      nullable: false, 
-      sampleValues: ['John', 'Jane', 'Bob', 'Alice', 'Charlie'] 
-    },
-    { 
-      name: 'age', 
-      type: 'integer', 
-      nullable: true, 
-      sampleValues: ['25', '30', '35', '28', '42'] 
-    },
-    { 
-      name: 'email', 
-      type: 'varchar', 
-      nullable: true, 
-      sampleValues: ['john@example.com', 'jane@test.com'] 
-    },
-    { 
-      name: 'is_active', 
-      type: 'boolean', 
-      nullable: false, 
-      sampleValues: ['true', 'false'] 
-    },
-    { 
-      name: 'created_at', 
-      type: 'timestamp', 
-      nullable: false, 
-      sampleValues: ['2023-01-01', '2023-06-15', '2024-01-01'] 
-    },
-    { 
-      name: 'salary', 
-      type: 'decimal', 
-      nullable: true, 
-      sampleValues: ['50000', '75000', '100000'] 
-    },
-  ]);
+  const { nodes = [], edges = [] } = props;
+  
+  const [availableColumns, setAvailableColumns] = useState<ExtendedColumnInfo[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [schemaError, setSchemaError] = useState<string | null>(null);
+
+  // 이전 노드로부터 스키마 정보 로드
+  useEffect(() => {
+    if (nodes.length > 0 && edges.length > 0) {
+      loadInputSchema();
+    }
+  }, [props.nodeId, nodes, edges]);
+
+  const loadInputSchema = async () => {
+    setLoading(true);
+    setSchemaError(null);
+    
+    try {
+      console.log('Loading input schema for Filter Rows node:', props.nodeId);
+      const schemaInfo = await getInputSchema(props.nodeId, nodes, edges);
+      
+      if (schemaInfo && schemaInfo.columns.length > 0) {
+        console.log('Schema loaded successfully:', schemaInfo);
+        // 컬럼 정보에 샘플 값 추가 (실제로는 API에서 가져와야 함)
+        const columnsWithSamples: ExtendedColumnInfo[] = schemaInfo.columns.map(col => ({
+          ...col,
+          sampleValues: generateSampleValues(col.type)
+        }));
+        setAvailableColumns(columnsWithSamples);
+        message.success(`${schemaInfo.sourceNodeType} 노드로부터 ${schemaInfo.columns.length}개 컬럼 정보를 가져왔습니다.`);
+      } else {
+        console.log('No schema found, using empty columns');
+        setAvailableColumns([]);
+        setSchemaError('이전 노드로부터 컬럼 정보를 가져올 수 없습니다. 이전 노드를 먼저 설정해주세요.');
+      }
+    } catch (error) {
+      console.error('Error loading input schema:', error);
+      setAvailableColumns([]);
+      setSchemaError('스키마 정보 로드 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 컬럼 타입에 따른 샘플 값 생성
+  const generateSampleValues = (type: string): string[] => {
+    const typeUpper = type.toUpperCase();
+    
+    if (typeUpper.includes('INT') || typeUpper.includes('NUMBER')) {
+      return ['1', '2', '3', '100', '500'];
+    } else if (typeUpper.includes('VARCHAR') || typeUpper.includes('TEXT') || typeUpper.includes('STRING')) {
+      return ['Sample Text', 'Example Value', 'Test Data'];
+    } else if (typeUpper.includes('BOOL')) {
+      return ['true', 'false'];
+    } else if (typeUpper.includes('DATE') || typeUpper.includes('TIME')) {
+      return ['2023-01-01', '2024-01-01', '2024-06-15'];
+    } else if (typeUpper.includes('DECIMAL') || typeUpper.includes('FLOAT')) {
+      return ['10.5', '25.75', '100.00'];
+    }
+    
+    return ['Sample', 'Example', 'Test'];
+  };
 
   // 현재 필터 조건들
   const filterConditions = props.config.filters || [];
@@ -404,9 +423,19 @@ const FilterRowsConfig: React.FC<FilterRowsConfigProps> = (props) => {
                           type="primary" 
                           icon={<PlusOutlined />}
                           onClick={addFilterCondition}
+                          disabled={loading || availableColumns.length === 0}
                         >
                           조건 추가
                         </Button>
+                        
+                        <Button
+                          size="small"
+                          icon={<ReloadOutlined />}
+                          onClick={loadInputSchema}
+                          loading={loading}
+                          title="스키마 다시 로드"
+                        />
+                        
                         <Divider type="vertical" />
                         <Text type="secondary">
                           총 {filterConditions.length}개 조건
@@ -418,6 +447,38 @@ const FilterRowsConfig: React.FC<FilterRowsConfigProps> = (props) => {
                         )}
                       </Space>
                     </Card>
+
+                    {/* 스키마 에러 표시 */}
+                    {schemaError && (
+                      <Alert
+                        message="스키마 로드 오류"
+                        description={schemaError}
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: '12px' }}
+                        action={
+                          <Button 
+                            size="small" 
+                            onClick={loadInputSchema}
+                            loading={loading}
+                          >
+                            다시 시도
+                          </Button>
+                        }
+                      />
+                    )}
+
+                    {/* 로딩 상태 */}
+                    {loading && (
+                      <Card size="small" style={{ marginBottom: '12px' }}>
+                        <div style={{ textAlign: 'center', padding: '20px' }}>
+                          <Spin />
+                          <div style={{ marginTop: '8px' }}>
+                            <Text type="secondary">이전 노드로부터 컬럼 정보를 가져오는 중...</Text>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
 
                     {/* 필터 조건 목록 */}
                     {filterConditions.length > 0 ? (

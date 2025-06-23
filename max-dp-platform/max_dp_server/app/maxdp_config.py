@@ -85,6 +85,31 @@ class Settings(BaseSettings):
         description="로그 레벨"
     )
     
+    # Redis 큐 시스템 설정 (CLAUDE.local.md 준수)
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        env="REDIS_URL",
+        description="Redis 서버 연결 URL"
+    )
+    
+    redis_queue_max_workers: int = Field(
+        default=4,
+        env="REDIS_QUEUE_MAX_WORKERS",
+        description="Redis 큐 워커 최대 수"
+    )
+    
+    redis_queue_timeout: int = Field(
+        default=30,
+        env="REDIS_QUEUE_TIMEOUT",
+        description="Redis 큐 작업 타임아웃 (초)"
+    )
+    
+    redis_max_retries: int = Field(
+        default=3,
+        env="REDIS_MAX_RETRIES",
+        description="Redis 큐 작업 최대 재시도 횟수"
+    )
+
     # Worker Manager 설정
     max_active_apis: int = Field(
         default=50,
@@ -150,4 +175,4 @@ DATABASE_URL = settings.database_url
 SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = settings.jwt_algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
-REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days 
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
